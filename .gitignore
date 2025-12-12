@@ -1,0 +1,32 @@
+# Python
+.venv/
+venv/
+env/
+__pycache__/
+*.py[cod]
+*$py.class
+.Python
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Streamlit
+.streamlit/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Our data and exports (optional - izbaci ako želiš da ih deliš)
+*.csv
+*.xlsx
+pricing_recommendations.csv
+web_recommendations.csv
+
+# Logs
+*.log
