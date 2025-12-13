@@ -6,7 +6,7 @@ from datetime import datetime, timedelta
 
 # ---------- KONFIGURACIJA ----------
 st.set_page_config(
-    page_title="Dinamičke Cijene PRO",
+    page_title="Dinamičke Cijene",
     page_icon="💰",
     layout="wide"
 )
@@ -411,6 +411,94 @@ def show_customer_analytics():
             mime="text/csv"
         )
 
+# ---------- KALKULATOR CIJENA ----------
+def show_price_calculator():
+    """Interaktivni kalkulator za određivanje cijena"""
+    st.title("🧮 Kalkulator dinamičkih cijena")
+    st.markdown("**Izračunaj optimalnu cijenu za bilo koji proizvod**")
+    
+    # Dva stupca za unos
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        st.subheader("📦 Podaci o proizvodu")
+        cost = st.number_input("Nabavna cijena (KM)", 0.0, 100000.0, 100.0, 1.0)
+        days = st.number_input("Dana u lageru", 0, 730, 45, 1)
+        current_price = st.number_input("Trenutna cijena (KM)", 0.0, 100000.0, 150.0, 1.0)
+        quantity = st.number_input("Količina", 1, 10000, 100, 1)
+    
+    with col2:
+        st.subheader("👥 Podaci o kupcu")
+        dso = st.slider("DSO kupca (dani)", 30, 180, 90, 1)
+        supplier_terms = st.selectbox("Rok plaćanja dobavljačima", [30, 45, 60, 90], index=2)
+        customer_type = st.selectbox("Tip kupca", ["Novi", "Redovan", "VIP", "Problematiční"])
+    
+    # GUMB ZA IZRAČUN
+    if st.button("🎯 Izračunaj optimalnu cijenu", type="primary"):
+        # Izračun
+        rec_price = calculate_dynamic_price(cost, days, dso, supplier_terms)
+        
+        # Rezultati
+        st.markdown("---")
+        st.subheader("📊 Rezultati")
+        
+        # Metrike u gridu
+        col1, col2, col3, col4 = st.columns(4)
+        
+        with col1:
+            st.metric("Preporučena cijena", f"{rec_price:.2f} KM")
+        
+        with col2:
+            if current_price > 0:
+                discount = ((current_price - rec_price) / current_price * 100)
+                st.metric("Potreban popust", f"{discount:.1f}%")
+        
+        with col3:
+            total_value = rec_price * quantity
+            st.metric("Ukupna vrijednost", f"{total_value:,.0f} KM")
+        
+        with col4:
+            profit_per_unit = rec_price - cost
+            st.metric("Dobit/kom", f"{profit_per_unit:.2f} KM")
+        
+        # Preporuka
+        st.markdown("---")
+        st.subheader("💡 Preporuka")
+        
+        if rec_price < current_price:
+            st.warning(f"**Smanji cijenu sa {current_price} na {rec_price} KM**")
+            st.write(f"- Potrebno je {discount:.1f}% popusta")
+            st.write(f"- Ukupna ušteda za kupca: {(current_price - rec_price) * quantity:.2f} KM")
+        elif rec_price > current_price:
+            st.success(f"**Povečaj cijenu sa {current_price} na {rec_price} KM**")
+            st.write(f"- Možeš dodati {(rec_price - current_price):.2f} KM po komadu")
+            st.write(f"- Dodatni prihod: {(rec_price - current_price) * quantity:.2f} KM")
+        else:
+            st.info("**Drži trenutnu cijenu - optimalna je!**")
+    
+    # Pomoć
+    with st.expander("❓ Kako se računa?", expanded=False):
+        st.markdown("""
+        **Formula dinamičke cijene:**
+        
+        1. **Osnovni multiplikator** (po starosti):
+           - ≤30 dana: ×1.50 (50% marža)
+           - 31-90 dana: ×1.25 (25% marža)
+           - 91-180 dana: ×1.10 (10% marža)
+           - >180 dana: ×0.95 (5% gubitak)
+        
+        2. **Trošak finansiranja**:
+           - Razlika = DSO kupca - Rok dobavljača
+           - Dnevna kamata = 8% / 365 dana
+           - Finansiranje = Osnovna cijena × Dnevna kamata × Razlika
+        
+        3. **Trošak skladištenja**:
+           - Mjeseci = Dana / 30
+           - Skladištenje = Nabavna × 0.5% × Mjeseci
+        
+        **Konačna cijena = Osnovna - Finansiranje - Skladištenje**
+        """)
+
 def show_settings():
     """Stranica sa podešavanjima"""
     st.title("⚙️ Podešavanja sistema")
@@ -456,7 +544,7 @@ def main():
     
     page = st.sidebar.radio(
         "Odaberi stranicu:",
-        ["📊 Dashboard", "👥 Analiza kupaca", "⚙️ Podešavanja"]
+        ["📊 Dashboard", "🧮 Kalkulator cijena", "👥 Analiza kupaca", "⚙️ Podešavanja"]
     )
     
     st.sidebar.markdown("---")
@@ -470,6 +558,8 @@ def main():
     # Prikaz odabrane stranice
     if page == "📊 Dashboard":
         show_dashboard()
+    elif page == "🧮 Kalkulator cijena":
+        show_price_calculator() 
     elif page == "👥 Analiza kupaca":
         show_customer_analytics()
     elif page == "⚙️ Podešavanja":
